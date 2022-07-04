@@ -3,6 +3,7 @@ import { grassTheme, globalCss, darkTheme } from "@pear-ui/core";
 import { useState, useEffect, ReactElement, ReactNode } from "react";
 import { NextPage } from "next";
 import { ThemeProvider } from "next-themes";
+import { supabase } from "../utils/supabase";
 
 const globalStyles = globalCss({
   html: {
@@ -37,6 +38,16 @@ type AppPropsWithLayout = AppProps & {
 
 function MyApp({ Component, pageProps }: AppPropsWithLayout) {
   globalStyles();
+
+  supabase.auth.onAuthStateChange((event, session) => {
+    fetch("/api/auth", {
+      method: "POST",
+      headers: new Headers({ "Content-Type": "application/json" }),
+      credentials: "same-origin",
+      body: JSON.stringify({ event, session }),
+    });
+  });
+
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {

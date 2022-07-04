@@ -1,35 +1,37 @@
+import { Button } from "@pear-ui/core";
+import { User } from "@supabase/supabase-js";
+import { GetServerSideProps } from "next";
 import { ReactElement, useEffect, useState } from "react";
 import MainLayout from "../components/layout/main";
 import { supabase } from "../utils/supabase";
+import { useRouter } from "next/router";
 
-const Home = () => {
-  const [loading, setLoading] = useState(true);
-  const [username, setUsername] = useState(null);
-  const [avatar_url, setAvatarUrl] = useState(null);
+interface IndexProps {
+  user: User;
+}
 
-  useEffect(() => {
-    getProfile();
-  }, []);
+const Home = ({ user }: IndexProps) => {
+  const { user_name, avatar_url } = user.user_metadata;
+  const [username, setUsername] = useState(user_name);
+  const [avatarUrl, setAvatarUrl] = useState(avatar_url);
+  const router = useRouter();
+  const handleSignout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (!error) router.push("/login");
+  };
 
-  async function getProfile() {
-    try {
-      setLoading(true);
-      const user = supabase.auth.user();
-      if (user) {
-        console.log(user.user_metadata);
-        const data = user.user_metadata;
-        if (data) {
-          setUsername(data.full_name);
-          setAvatarUrl(data.avatar_url);
-        }
-      }
-    } catch (error: any) {
-      alert(error.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-  return <div>{username}</div>;
+  return (
+    <div>
+      {username}
+      <Button
+        onClick={() => {
+          handleSignout();
+        }}
+      >
+        Sign out{" "}
+      </Button>
+    </div>
+  );
 };
 
 Home.getLayout = function getLayout(page: ReactElement) {
@@ -37,3 +39,15 @@ Home.getLayout = function getLayout(page: ReactElement) {
 };
 
 export default Home;
+
+export const getServerSideProps: GetServerSideProps = async (context) => {
+  const { user } = await supabase.auth.api.getUserByCookie(context.req);
+  console.log(user);
+  if (!user) {
+    // If no user, redirect to index.
+    return { props: {}, redirect: { destination: "/login", permanent: false } };
+  }
+
+  // If there is a user, return it.
+  return { props: { user } };
+};
